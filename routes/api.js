@@ -1,50 +1,38 @@
+'use strict';
 
-const express = require('express');
-const ConvertHandler = require('../controllers/convertHandler');
+const ConvertHandler = require('../controllers/convertHandler.js');
 
-const router = express.Router();
-const convertHandler = new ConvertHandler();
+module.exports = function (app) {
 
-router.get('/convert', (req, res) => {
-  const input = typeof req.query.input === 'string'
-    ? req.query.input
-    : '';
+  let convertHandler = new ConvertHandler();
 
-  const initNum = convertHandler.getNum(input);
-  const initUnit = convertHandler.getUnit(input);
+  app.route('/api/convert')
+    .get(function (req, res) {
+      let input = req.query.input;
+      let initNum = convertHandler.getNum(input);
+      let initUnit = convertHandler.getUnit(input);
 
-  const numInvalid = initNum === 'invalid';
-  const unitInvalid = initUnit === 'invalid';
+      if (initNum === 'invalid number' && initUnit === 'invalid unit') {
+        return res.send('invalid number and unit');
+      }
+      if (initNum === 'invalid number') {
+        return res.send('invalid number');
+      }
+      if (initUnit === 'invalid unit') {
+        return res.send('invalid unit');
+      }
 
-  if (numInvalid && unitInvalid) {
-    return res.status(200).send('invalid number and unit');
-  }
+      let returnNum = convertHandler.convert(initNum, initUnit);
+      let returnUnit = convertHandler.getReturnUnit(initUnit);
+      let string = convertHandler.getString(initNum, initUnit, returnNum, returnUnit);
 
-  if (numInvalid) {
-    return res.status(200).send('invalid number');
-  }
+      res.json({
+        initNum: initNum,
+        initUnit: initUnit,
+        returnNum: returnNum,
+        returnUnit: returnUnit,
+        string: string
+      });
+    });
 
-  if (unitInvalid) {
-    return res.status(200).send('invalid unit');
-  }
-
-  const returnNum = convertHandler.convert(initNum, initUnit);
-  const returnUnit = convertHandler.getReturnUnit(initUnit);
-
-  const string = convertHandler.getString(
-    initNum,
-    initUnit,
-    returnNum,
-    returnUnit
-  );
-
-  return res.status(200).json({
-    initNum,
-    initUnit,
-    returnNum,
-    returnUnit,
-    string
-  });
-});
-
-module.exports = router;
+};
