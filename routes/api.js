@@ -1,26 +1,44 @@
+
 const express = require('express');
+const ConvertHandler = require('../controllers/convertHandler');
+
 const router = express.Router();
-const convertHandler = require('../controllers/convertHandler').convertHandler;
+const convertHandler = new ConvertHandler();
 
 router.get('/convert', (req, res) => {
-  const { input } = req.query;
-  const { initNum, initUnit } = convertHandler(input);
+  const input = typeof req.query.input === 'string'
+    ? req.query.input
+    : '';
 
-  if (initNum === 'invalid number' && initUnit === 'invalid unit') {
+  const initNum = convertHandler.getNum(input);
+  const initUnit = convertHandler.getUnit(input);
+
+  const numInvalid = initNum === 'invalid';
+  const unitInvalid = initUnit === 'invalid';
+
+  if (numInvalid && unitInvalid) {
     return res.status(200).send('invalid number and unit');
   }
-  if (initNum === 'invalid number') {
+
+  if (numInvalid) {
     return res.status(200).send('invalid number');
   }
-  if (initUnit === 'invalid unit') {
+
+  if (unitInvalid) {
     return res.status(200).send('invalid unit');
   }
 
-  const returnUnit = require('../controllers/convertHandler').getReturnUnit(initUnit);
-  const returnNum = require('../controllers/convertHandler').convert(initNum, initUnit);
-  const string = require('../controllers/convertHandler').getString(initNum, initUnit, returnNum, returnUnit);
+  const returnNum = convertHandler.convert(initNum, initUnit);
+  const returnUnit = convertHandler.getReturnUnit(initUnit);
 
-  res.status(200).json({
+  const string = convertHandler.getString(
+    initNum,
+    initUnit,
+    returnNum,
+    returnUnit
+  );
+
+  return res.status(200).json({
     initNum,
     initUnit,
     returnNum,

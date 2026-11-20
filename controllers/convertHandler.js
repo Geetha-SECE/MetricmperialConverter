@@ -1,141 +1,87 @@
-const convertHandler = (input) => {
-  if (!input || typeof input !== 'string') {
-    return { initNum: 'invalid number', initUnit: 'invalid unit' };
+
+class ConvertHandler {
+  constructor() {
+    this.units = {
+      gal: { name: 'gallons', returnUnit: 'L', factor: 3.78541 },
+      L: { name: 'liters', returnUnit: 'gal', factor: 1 / 3.78541 },
+      mi: { name: 'miles', returnUnit: 'km', factor: 1.60934 },
+      km: { name: 'kilometers', returnUnit: 'mi', factor: 1 / 1.60934 },
+      lbs: { name: 'pounds', returnUnit: 'kg', factor: 0.453592 },
+      kg: { name: 'kilograms', returnUnit: 'lbs', factor: 1 / 0.453592 }
+    };
   }
 
-  const match = input.match(/[a-zA-Z]/);
-  let numPart, unitPart;
-  if (match) {
-    numPart = input.slice(0, match.index);
-    unitPart = input.slice(match.index);
-  } else {
-    numPart = input;
-    unitPart = '';
-  }
+  getNum(input) {
+    const index = input.search(/[a-zA-Z]/);
+    const numString = index === -1 ? input : input.slice(0, index);
 
-  const initNum = getNum(numPart);
-  const initUnit = getUnit(unitPart);
+    if (numString === '') return 1;
 
-  return { initNum, initUnit };
-};
+    const numberPattern =
+      /^(?:\d+(?:\.\d*)?|\.\d+)(?:\/(?:\d+(?:\.\d*)?|\.\d+))?$/;
 
-const getNum = (input) => {
-  if (!input || input === '') {
-    return 1;
-  }
+    if (!numberPattern.test(numString)) return 'invalid';
 
-  if (input.includes('/')) {
-    const parts = input.split('/');
-    if (parts.length !== 2) {
-      return 'invalid number';
+    if (numString.includes('/')) {
+      const parts = numString.split('/');
+      const numerator = Number(parts[0]);
+      const denominator = Number(parts[1]);
+
+      if (denominator === 0) return 'invalid';
+
+      return numerator / denominator;
     }
-    const [numerator, denominator] = parts;
-    if (numerator === '' || denominator === '') {
-      return 'invalid number';
-    }
-    const num = Number(numerator);
-    const den = Number(denominator);
-    if (isNaN(num) || isNaN(den) || den === 0) {
-      return 'invalid number';
-    }
-    // Check for extra dots in numerator or denominator
-    if (numerator.split('.').length > 2 || denominator.split('.').length > 2) {
-      return 'invalid number';
-    }
-    return num / den;
+
+    return Number(numString);
   }
 
-  // Check for multiple dots or other invalid patterns
-  if (input.split('.').length > 2) {
-    return 'invalid number';
+  getUnit(input) {
+    const index = input.search(/[a-zA-Z]/);
+
+    if (index === -1) return 'invalid';
+
+    const unit = input.slice(index).toLowerCase();
+
+    if (unit === 'l') return 'L';
+
+    return this.units[unit] ? unit : 'invalid';
   }
 
-  const num = Number(input);
-  if (isNaN(num)) {
-    return 'invalid number';
+  getReturnUnit(initUnit) {
+    const unit = initUnit.toLowerCase() === 'l'
+      ? 'L'
+      : initUnit.toLowerCase();
+
+    return this.units[unit]
+      ? this.units[unit].returnUnit
+      : 'invalid';
   }
 
-  return num;
-};
+  spellOutUnit(unit) {
+    const normalized = unit.toLowerCase() === 'l'
+      ? 'L'
+      : unit.toLowerCase();
 
-const getUnit = (input) => {
-  if (!input || typeof input !== 'string') {
-    return 'invalid unit';
+    return this.units[normalized]
+      ? this.units[normalized].name
+      : '';
   }
 
-  const lower = input.toLowerCase();
+  convert(initNum, initUnit) {
+    const normalized = initUnit.toLowerCase() === 'l'
+      ? 'L'
+      : initUnit.toLowerCase();
 
-  switch (lower) {
-    case 'gal':
-      return 'gal';
-    case 'l':
-      return 'L';
-    case 'mi':
-      return 'mi';
-    case 'km':
-      return 'km';
-    case 'lbs':
-      return 'lbs';
-    case 'kg':
-      return 'kg';
-    default:
-      return 'invalid unit';
-  }
-};
+    if (!this.units[normalized]) return 'invalid';
 
-const getReturnUnit = (initUnit) => {
-  const unitMap = {
-    'gal': 'L',
-    'L': 'gal',
-    'mi': 'km',
-    'km': 'mi',
-    'lbs': 'kg',
-    'kg': 'lbs'
-  };
-  return unitMap[initUnit];
-};
+    const result = initNum * this.units[normalized].factor;
 
-const spellOutUnit = (unit) => {
-  const unitMap = {
-    'gal': 'gallons',
-    'L': 'liters',
-    'mi': 'miles',
-    'km': 'kilometers',
-    'lbs': 'pounds',
-    'kg': 'kilograms'
-  };
-  return unitMap[unit];
-};
-
-const convert = (initNum, initUnit) => {
-  const conversionFactors = {
-    'gal': 3.78541,
-    'L': 1 / 3.78541,
-    'mi': 1.60934,
-    'km': 1 / 1.60934,
-    'lbs': 0.453592,
-    'kg': 1 / 0.453592
-  };
-
-  const factor = conversionFactors[initUnit];
-  if (factor === undefined) {
-    return NaN;
+    return Number(result.toFixed(5));
   }
 
-  const result = initNum * factor;
-  return Number(result.toFixed(5));
-};
+  getString(initNum, initUnit, returnNum, returnUnit) {
+    return `${initNum} ${this.spellOutUnit(initUnit)} converts to ${returnNum} ${this.spellOutUnit(returnUnit)}`;
+  }
+}
 
-const getString = (initNum, initUnit, returnNum, returnUnit) => {
-  return `${initNum} ${spellOutUnit(initUnit)} converts to ${returnNum} ${spellOutUnit(returnUnit)}`;
-};
-
-module.exports = {
-  convertHandler,
-  getNum,
-  getUnit,
-  getReturnUnit,
-  spellOutUnit,
-  convert,
-  getString
-};
+module.exports = ConvertHandler;
